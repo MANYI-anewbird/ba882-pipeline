@@ -15,46 +15,50 @@ Build a cloud-based data pipeline that:
 ## Architecture
 ba882-team8-github-pipeline/
 │
-├── README.md  
-│  
-├── requirements.txt                             
+├── README.md
+├── requirements.txt
 │
-├── data/                             
-│   ├── raw/                         
-│   ├── processed/                   
-│   └── schema/                       
+├── data/
+│   ├── raw/
+│   ├── processed/
+│   └── schema/
 │
-├── notebooks/                        
+├── notebooks/
 │   ├── 01-github-api-test.ipynb
 │   ├── 02-data-cleaning.ipynb
 │   ├── 03-visualization.ipynb
-│   └── archive/                      
+│   └── archive/
 │
-├── scripts/                          
-│   ├── extract_github.py             
-│   ├── parse_to_bigquery.py          
-│   ├── create_schema_bq.py           
+├── scripts/
+│   ├── extract_github.py
+│   ├── parse_to_bigquery.py
+│   ├── create_schema_bq.py
+│   └── utils.py
 │
-├── cloud_functions/                  ）
+├── cloud_functions/
 │   ├── raw-schema-setup-bq/
 │   │   ├── main.py
 │   │   └── requirements.txt
+│   │
 │   ├── raw-extract-github/
 │   │   ├── main.py
 │   │   └── requirements.txt
+│   │
 │   ├── raw-parse-github/
 │   │   ├── main.py
 │   │   └── requirements.txt
+│   │
 │   └── README.md
 │
-├── streamlit_app/                    
+├── streamlit_app/
 │   ├── app.py
 │   └── requirements.txt
 │
-└── docs/                             
-    ├── architecture_diagram.png      
+└── docs/
+    ├── architecture_diagram.png
     ├── team_notes.md
     └── project_report_draft.md
+
 
 ## Deployment Steps
 1. Create GCS bucket: `ba882-team8-github`
@@ -68,3 +72,4 @@ ba882-team8-github-pipeline/
 - Google Cloud Platform (GCS, BigQuery, Cloud Functions)
 - Python (requests, pandas, google-cloud-bigquery)
 - Streamlit (for visualization)
+
