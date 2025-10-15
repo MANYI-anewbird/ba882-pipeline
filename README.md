@@ -57,7 +57,7 @@ ba882-team8-github-pipeline/
     ├── team_notes.md
     └── project_report_draft.md
 
-
+```bash
 
 ## Deployment Steps
 1. Create GCS bucket: `ba882-team8-github`
