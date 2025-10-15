@@ -12,7 +12,8 @@ Build a cloud-based data pipeline that:
 2. Stores raw JSON files in Google Cloud Storage.
 3. Parses and loads structured data into BigQuery tables.
 
-## Architecture
+##  Architecture
+```bash
 ba882-team8-github-pipeline/
 │
 ├── README.md
@@ -39,15 +40,12 @@ ba882-team8-github-pipeline/
 │   ├── raw-schema-setup-bq/
 │   │   ├── main.py
 │   │   └── requirements.txt
-│   │
 │   ├── raw-extract-github/
 │   │   ├── main.py
 │   │   └── requirements.txt
-│   │
 │   ├── raw-parse-github/
 │   │   ├── main.py
 │   │   └── requirements.txt
-│   │
 │   └── README.md
 │
 ├── streamlit_app/
@@ -58,6 +56,7 @@ ba882-team8-github-pipeline/
     ├── architecture_diagram.png
     ├── team_notes.md
     └── project_report_draft.md
+
 
 
 ## Deployment Steps
