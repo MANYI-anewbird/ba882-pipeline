@@ -7,28 +7,41 @@ This project explores technology adoption trends using open-source developer dat
 Emre Can Baykurt, Manyi Hong, Sanjal Atul Desai, Zehui Wang
 
 ## Phase 1 Objective
-Build a cloud-based data pipeline that:
-1. Fetches GitHub repository metadata weekly using the GitHub API.
-2. Stores raw JSON files in Google Cloud Storage.
-3. Parses and loads structured data into BigQuery tables.
+Build an automated, cloud-native data pipeline that:
+01 Fetches GitHub repository metadata weekly using the GitHub API.
+02 Stores raw JSON responses in Google Cloud Storage (GCS).
+03 Parses and loads cleaned structured data into BigQuery tables.
+04 Prepares for later phases of analysis and dashboard visualization.
 
 ## Architecture
 
 ```bash
-ba882-team8-github-pipeline/
+ba882-pipeline/
 │
 ├── README.md
-├── requirements.txt
 │
-├── data/
-│   ├── raw/
-│   ├── processed/
-│   └── schema/
+├── cloud_functions/
+│   ├── raw-extract-github-commits/
+│   │   ├── main.py
+│   │   └── requirements.txt
+│   ├── raw-extract-github-contributors/
+│   │   ├── main.py
+│   │   └── requirements.txt
+│   ├── raw-extract-github-repos/
+│   │   ├── main.py
+│   │   └── requirements.txt
+│   ├── raw-parse-github/
+│   │   ├── main.py
+│   │   └── requirements.txt
+│   ├── raw-schema-setup-bq/
+│   │   ├── main.py
+│   │   └── requirements.txt
+│   └── README.md
 │
 ├── notebooks/
-│   ├── 01-github-api-test.ipynb
-│   ├── 02-data-cleaning.ipynb
-│   ├── 03-visualization.ipynb
+│   ├── 01_github_api_test.ipynb
+│   ├── 02_data_cleaning.ipynb
+│   ├── 03_visualization.ipynb
 │   └── archive/
 │
 ├── scripts/
@@ -36,18 +49,6 @@ ba882-team8-github-pipeline/
 │   ├── parse_to_bigquery.py
 │   ├── create_schema_bq.py
 │   └── utils.py
-│
-├── cloud_functions/
-│   ├── raw-schema-setup-bq/
-│   │   ├── main.py
-│   │   └── requirements.txt
-│   ├── raw-extract-github/
-│   │   ├── main.py
-│   │   └── requirements.txt
-│   ├── raw-parse-github/
-│   │   ├── main.py
-│   │   └── requirements.txt
-│   └── README.md
 │
 ├── streamlit_app/
 │   ├── app.py
@@ -60,11 +61,13 @@ ba882-team8-github-pipeline/
 ```   
 
 ## Deployment Steps
-1. Create GCS bucket: `ba882-team8-github`
-2. Create BigQuery dataset: `github_raw`
+1. Create GCS bucket: `ba882-t8-github`
+2. Create BigQuery dataset: `ba-882-fall25-team8`
 3. Deploy Cloud Functions:
    - raw-schema-setup-bq
-   - raw-extract-github
+   - raw-extract-github-repos
+   - raw-extract-github-contributors
+   - raw-extract-github-commits
    - raw-parse-github
 
 ## Tech Stack
