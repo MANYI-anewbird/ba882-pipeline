@@ -14,45 +14,52 @@ BUCKET_NAME = "ba882-t8-github"
 @functions_framework.http
 def task(request):
     """
-    Cloud Function: extract contributors of top 200 GitHub repos
+    Cloud Function: extract contributors for top N GitHub repos
+    Example:
+        Default: read repos_200.json
+        Custom: ?limit=300  → read repos_300.json
     """
-    print("Starting GitHub contributors extraction task...")
+    print("🚀 Starting GitHub contributors extraction task...")
 
-    # Step 1️ - Get GitHub Token from Secret Manager
+    # Step 1 - Get GitHub Token
     sm_client = secretmanager.SecretManagerServiceClient()
     secret_path = f"projects/{PROJECT_ID}/secrets/{SECRET_NAME}/versions/latest"
     token_response = sm_client.access_secret_version(request={"name": secret_path})
     github_token = token_response.payload.data.decode("UTF-8")
-    print("✅ Retrieved GitHub token")
+    print("successs: Retrieved GitHub token")
 
     # Step 2️ - Read repo list from GCS
     storage_client = storage.Client()
     bucket = storage_client.bucket(BUCKET_NAME)
 
-    # date
     run_date = datetime.datetime.utcnow().strftime("%Y%m%d")
-    repo_file_path = f"raw/github_repos_raw/date={run_date}/repos_200.json"
+    limit = int(request.args.get("limit", 200))  # allow ?limit=300
+    repo_file_path = f"raw/github_repos_raw/date={run_date}/repos_{limit}.json"
 
     print(f"Reading repo list from gs://{BUCKET_NAME}/{repo_file_path}")
     blob = bucket.blob(repo_file_path)
+    if not blob.exists():
+        return {"error": f"Repo file not found: {repo_file_path}"}, 404
+
     repo_data = json.loads(blob.download_as_string())
-    print(f"✅ Loaded {len(repo_data)} repos")
+    print(f"success: Loaded {len(repo_data)} repos from {repo_file_path}")
 
     # Step 3️ - Extract contributors for each repo
     headers = {"Authorization": f"token {github_token}"}
     base_url = "https://api.github.com/repos"
 
     all_contributors = []
-    for repo in repo_data[:200]:  # limit to 200 repos
+    for repo in repo_data[:limit]:
         full_name = repo.get("full_name")
         if not full_name:
             continue
 
         url = f"{base_url}/{full_name}/contributors"
-        print(f"Fetching contributors for {full_name}")
+        print(f"Fetching contributors for {full_name} ...")
+
         response = requests.get(url, headers=headers, params={"per_page": 100})
         if response.status_code != 200:
-            print(f" Failed to fetch {full_name}: {response.status_code}")
+            print(f"Failed for {full_name}: {response.status_code}")
             continue
 
         contributors = response.json()
@@ -67,17 +74,17 @@ def task(request):
                 "snapshot_date": run_date
             })
 
-    print(f"✅ Total contributors collected: {len(all_contributors)}")
+    print(f"success: Total contributors collected: {len(all_contributors)}")
 
-    # Step 4️ - Save to GCS
-    output_path = f"raw/github_contributors_raw/date={run_date}/contributors.json"
-    output_blob = bucket.blob(output_path)
-    output_blob.upload_from_string(json.dumps(all_contributors))
-    print(f"Uploaded contributors data to gs://{BUCKET_NAME}/{output_path}")
+    # Step 4️ - Upload to GCS
+    output_path = f"raw/github_contributors_raw/date={run_date}/contributors_{limit}.json"
+    blob_out = bucket.blob(output_path)
+    blob_out.upload_from_string(json.dumps(all_contributors))
+    print(f"Uploaded to gs://{BUCKET_NAME}/{output_path}")
 
     # Step 5️ - Return metadata
     return {
-        "message": "GitHub contributors extracted successfully!",
+        "message": f"success:GitHub contributors extracted successfully for top {limit} repos!",
         "contributors_count": len(all_contributors),
         "bucket": BUCKET_NAME,
         "path": output_path
