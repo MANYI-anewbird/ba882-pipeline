@@ -41,7 +41,7 @@ def task(request):
 
     for page in range(1, total_pages + 1):
         params = {
-            "q": "stars:>1",
+            "q": "stars:>5000",
             "sort": "stars",
             "order": "desc",
             "per_page": per_page,
