@@ -28,7 +28,7 @@ def task(request):
     token_response = sm_client.access_secret_version(request={"name": secret_path})
     github_token = token_response.payload.data.decode("UTF-8")
     headers = {"Authorization": f"token {github_token}"}
-    print("successs: Retrieved GitHub token")
+    print("success: Retrieved GitHub token")
 
     # Step 2️ — Load repo list from GCS
     storage_client = storage.Client()
@@ -61,10 +61,15 @@ def task(request):
 
         try:
             response = requests.get(url, headers=headers, params={"per_page": 100})
+           
             if response.status_code == 403:
                 print("warning: Rate limit hit, waiting 60s...")
                 time.sleep(60)
-                continue
+                # Retry the same repo
+                response = requests.get(url, headers=headers, params={"per_page": 100})
+                if response.status_code != 200:
+                    print(f"warning: Retry failed for {full_name}")
+                    continue
             elif response.status_code != 200:
                 print(f"warning: Failed {response.status_code} for {full_name}")
                 continue
