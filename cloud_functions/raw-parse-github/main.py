@@ -28,7 +28,7 @@ def task(request):
         print(f"success: Created dataset: {DATASET_ID}")
 
     run_date = request.args.get("date") or datetime.datetime.utcnow().strftime("%Y%m%d")
-    limit = int(request.args.get("limit", 200))  # ✅ 修复1：改成int和200
+    limit = int(request.args.get("limit", 200))  # 
     print(f"Parsing snapshot {run_date}, limit={limit}")
 
     files = {
@@ -56,7 +56,7 @@ def task(request):
 
         # Add snapshot_date only if not present (repos don't have it, but contributors and commits do)
         for row in raw_data:
-            if "snapshot_date" not in row:  # ✅ 修复2：只在没有时才添加
+            if "snapshot_date" not in row:  
                 row["snapshot_date"] = int(run_date)
 
         job_config = bigquery.LoadJobConfig(
