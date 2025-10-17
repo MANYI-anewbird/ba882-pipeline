@@ -22,13 +22,13 @@ def task(request):
     dataset_ref = bigquery.Dataset(f"{PROJECT_ID}.{DATASET_ID}")
     try:
         bq_client.get_dataset(dataset_ref)
-        print(f"success:Dataset {DATASET_ID} already exists.")
+        print(f"success: Dataset {DATASET_ID} already exists.")
     except Exception:
         bq_client.create_dataset(dataset_ref, exists_ok=True)
-        print(f"success:Created dataset: {DATASET_ID}")
+        print(f"success: Created dataset: {DATASET_ID}")
 
     run_date = request.args.get("date") or datetime.datetime.utcnow().strftime("%Y%m%d")
-    limit = request.args.get("limit", "300")
+    limit = int(request.args.get("limit", 200))  # ✅ 修复1：改成int和200
     print(f"Parsing snapshot {run_date}, limit={limit}")
 
     files = {
@@ -54,9 +54,10 @@ def task(request):
 
         print(f"success: Loaded {len(raw_data)} records from {file_path}")
 
-        # Add snapshot_date
+        # Add snapshot_date only if not present (repos don't have it, but contributors and commits do)
         for row in raw_data:
-            row["snapshot_date"] = int(run_date)
+            if "snapshot_date" not in row:  # ✅ 修复2：只在没有时才添加
+                row["snapshot_date"] = int(run_date)
 
         job_config = bigquery.LoadJobConfig(
             source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON,
@@ -72,3 +73,4 @@ def task(request):
 
     print("All JSON files parsed and appended to BigQuery successfully!")
     return {"message": f"All GitHub data parsed for {run_date}!"}, 200
+    
