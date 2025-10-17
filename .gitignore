@@ -205,3 +205,9 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+keys/
+*.json
+!requirements.txt
+!package.json
+!package-lock.json
+airflow/include/*.json
