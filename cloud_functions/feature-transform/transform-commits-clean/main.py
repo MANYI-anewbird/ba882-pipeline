@@ -78,7 +78,7 @@ def task(request):
                 ELSE FALSE
             END as is_bot_commit,
             CASE 
-                WHEN REGEXP_CONTAINS(author_email_clean, r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{{2,}}$') THEN TRUE
+                WHEN REGEXP_CONTAINS(author_email_clean, r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]') THEN TRUE
                 ELSE FALSE
             END as is_valid_email,
             LENGTH(commit_message) as message_length,
@@ -115,7 +115,7 @@ def task(request):
     FROM parsed_commits
     WHERE NOT is_bot_commit
     ORDER BY commit_timestamp DESC
-    LIMIT {{limit}}
+    LIMIT {limit}
     """
     
     try:
