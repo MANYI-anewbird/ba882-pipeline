@@ -1,58 +1,84 @@
+from datetime import datetime
 from airflow import DAG
-from airflow.providers.http.operators.http import SimpleHttpOperator
-from airflow.operators.dummy import DummyOperator
-from airflow.utils.dates import days_ago
-from datetime import timedelta
+from airflow.operators.bash import BashOperator
 
-# === Default settings ===
+PROJECT_ID = "ba-882-fall25-team8"
+LOCATION = "us-central1"
+
 default_args = {
-    'owner': 'Manyi Hong',
-    'depends_on_past': False,
-    'retries': 1,
-    'retry_delay': timedelta(minutes=5),
+    "owner": "airflow",
+    "depends_on_past": False,
+    "email_on_failure": False,
+    "email_on_retry": False,
+    "retries": 1,
 }
 
-# === DAG definition ===
+# Function URLs
+FUNCTIONS = {
+    "schema_setup": "https://raw-schema-setup-bq-qentqpf6ya-uc.a.run.app",
+    "extract_repos": "https://raw-extract-github-repos-qentqpf6ya-uc.a.run.app",
+    "extract_contributors": "https://raw-extract-github-contributors-qentqpf6ya-uc.a.run.app",
+    "extract_commits": "https://raw-extract-github-commits-qentqpf6ya-uc.a.run.app",
+    "parse_github": "https://raw-parse-github-qentqpf6ya-uc.a.run.app",
+    
+    # Transform layer functions
+    "transform_repos": "https://us-central1-ba-882-fall25-team8.cloudfunctions.net/transform-repos-summary",
+    "transform_contributors": "https://us-central1-ba-882-fall25-team8.cloudfunctions.net/transform-contributors-clean",
+    "transform_commits": "https://us-central1-ba-882-fall25-team8.cloudfunctions.net/transform-commits-clean",
+}
+
 with DAG(
-    'github_pipeline_dag',
+    dag_id="github_data_pipeline_v3",
     default_args=default_args,
-    description='Run GitHub extract and parse Cloud Functions in sequence',
-    schedule_interval='@weekly',  # 每周自动运行
-    start_date=days_ago(1),
+    start_date=datetime(2024, 10, 16),
+    schedule="@weekly",
     catchup=False,
-    tags=['github', 'cloud-function'],
+    tags=["github", "pipeline"],
 ) as dag:
 
-    start = DummyOperator(task_id='start')
-
-    extract_repos = SimpleHttpOperator(
-        task_id='extract_github_repos',
-        http_conn_id='gcp_cloud_function',
-        endpoint='raw-extract-github-repos?limit=300',
-        method='GET',
+    schema_setup = BashOperator(
+        task_id="setup_bq_schema",
+        bash_command=f'curl -X POST "{FUNCTIONS["schema_setup"]}" -H "Content-Type: application/json" -d \'{{}}\''
     )
 
-    extract_contributors = SimpleHttpOperator(
-        task_id='extract_github_contributors',
-        http_conn_id='gcp_cloud_function',
-        endpoint='raw-extract-github-contributors?limit=300',
-        method='GET',
+    extract_repos = BashOperator(
+        task_id="extract_github_repos",
+        bash_command=f'curl -X POST "{FUNCTIONS["extract_repos"]}?limit=200" -H "Content-Type: application/json" -d \'{{}}\''
     )
 
-    extract_commits = SimpleHttpOperator(
-        task_id='extract_github_commits',
-        http_conn_id='gcp_cloud_function',
-        endpoint='raw-extract-github-commits?limit=300',
-        method='GET',
+    extract_contributors = BashOperator(
+        task_id="extract_github_contributors",
+        bash_command=f'curl -X POST "{FUNCTIONS["extract_contributors"]}?limit=200" -H "Content-Type: application/json" -d \'{{}}\''
     )
 
-    parse_to_bigquery = SimpleHttpOperator(
-        task_id='parse_github_data',
-        http_conn_id='gcp_cloud_function',
-        endpoint='raw-parse-github?date={{ ds_nodash }}&limit=300',
-        method='GET',
+    extract_commits = BashOperator(
+        task_id="extract_github_commits",
+        bash_command=f'curl -X POST "{FUNCTIONS["extract_commits"]}?limit=200" -H "Content-Type: application/json" -d \'{{}}\''
     )
 
-    end = DummyOperator(task_id='end')
+    parse_github = BashOperator(
+        task_id="parse_github_data",
+        bash_command=f'curl -X POST "{FUNCTIONS["parse_github"]}?limit=200" -H "Content-Type: application/json" -d \'{{}}\''
+    )
 
-    start >> extract_repos >> extract_contributors >> extract_commits >> parse_to_bigquery >> end
+    # Transform layer tasks
+    transform_repos = BashOperator(
+        task_id="transform_repos_summary",
+        bash_command=f'curl -X POST "{FUNCTIONS["transform_repos"]}?limit=1000" -H "Content-Type: application/json" -d \'{{}}\''
+    )
+
+    transform_contributors = BashOperator(
+        task_id="transform_contributors_clean",
+        bash_command=f'curl -X POST "{FUNCTIONS["transform_contributors"]}?limit=10000" -H "Content-Type: application/json" -d \'{{}}\''
+    )
+
+    transform_commits = BashOperator(
+        task_id="transform_commits_clean",
+        bash_command=f'curl -X POST "{FUNCTIONS["transform_commits"]}?limit=20000" -H "Content-Type: application/json" -d \'{{}}\''
+    )
+
+    # DAG dependencies
+    schema_setup >> extract_repos
+    extract_repos >> [extract_contributors, extract_commits]
+    [extract_contributors, extract_commits] >> parse_github
+    parse_github >> [transform_repos, transform_contributors, transform_commits]
