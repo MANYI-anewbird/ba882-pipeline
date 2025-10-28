@@ -19,6 +19,7 @@ FUNCTIONS = {
     "extract_repos": "https://raw-extract-github-repos-qentqpf6ya-uc.a.run.app",
     "extract_contributors": "https://raw-extract-github-contributors-qentqpf6ya-uc.a.run.app",
     "extract_commits": "https://raw-extract-github-commits-qentqpf6ya-uc.a.run.app",
+    "extract_readme": "https://raw-extract-github-readme-643469687953.us-central1.run.app",
     "parse_github": "https://raw-parse-github-qentqpf6ya-uc.a.run.app",
     
     # Transform layer functions
@@ -56,6 +57,11 @@ with DAG(
         bash_command=f'curl -X POST "{FUNCTIONS["extract_commits"]}?limit=200" -H "Content-Type: application/json" -d \'{{}}\''
     )
 
+    extract_readme = BashOperator(
+        task_id="extract_github_readme",
+        bash_command=f'curl -X POST "{FUNCTIONS["extract_readme"]}?limit=200" -H "Content-Type: application/json" -d \'{{}}\''
+    )
+
     parse_github = BashOperator(
         task_id="parse_github_data",
         bash_command=f'curl -X POST "{FUNCTIONS["parse_github"]}?limit=200" -H "Content-Type: application/json" -d \'{{}}\''
@@ -79,6 +85,6 @@ with DAG(
 
     # DAG dependencies
     schema_setup >> extract_repos
-    extract_repos >> [extract_contributors, extract_commits]
-    [extract_contributors, extract_commits] >> parse_github
+    extract_repos >> [extract_contributors, extract_commits, extract_readme]
+    [extract_contributors, extract_commits, extract_readme] >> parse_github
     parse_github >> [transform_repos, transform_contributors, transform_commits]
