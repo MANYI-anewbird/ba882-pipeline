@@ -20,12 +20,15 @@ FUNCTIONS = {
     "extract_contributors": "https://raw-extract-github-contributors-qentqpf6ya-uc.a.run.app",
     "extract_commits": "https://raw-extract-github-commits-qentqpf6ya-uc.a.run.app",
     "extract_readme": "https://raw-extract-github-readme-643469687953.us-central1.run.app",
+    "extract_languages": "https://raw-extract-github-languages-qentqpf6ya-uc.a.run.app",  # ADD THIS
     "parse_github": "https://raw-parse-github-qentqpf6ya-uc.a.run.app",
     
     # Transform layer functions
     "transform_repos": "https://us-central1-ba-882-fall25-team8.cloudfunctions.net/transform-repos-summary",
     "transform_contributors": "https://us-central1-ba-882-fall25-team8.cloudfunctions.net/transform-contributors-clean",
     "transform_commits": "https://us-central1-ba-882-fall25-team8.cloudfunctions.net/transform-commits-clean",
+    "transform_readme": "https://transform-readme-summary-qentqpf6ya-uc.a.run.app",  # ADD THIS
+    "transform_languages": "https://transform-language-summary-qentqpf6ya-uc.a.run.app",  # ADD THIS
 }
 
 with DAG(
@@ -62,6 +65,11 @@ with DAG(
         bash_command=f'curl -X POST "{FUNCTIONS["extract_readme"]}?limit=200" -H "Content-Type: application/json" -d \'{{}}\''
     )
 
+    extract_languages = BashOperator(
+        task_id="extract_github_languages",
+        bash_command=f'curl -X POST "{FUNCTIONS["extract_languages"]}?limit=200" -H "Content-Type: application/json" -d \'{{}}\''
+    )
+
     parse_github = BashOperator(
         task_id="parse_github_data",
         bash_command=f'curl -X POST "{FUNCTIONS["parse_github"]}?limit=200" -H "Content-Type: application/json" -d \'{{}}\''
@@ -83,8 +91,19 @@ with DAG(
         bash_command=f'curl -X POST "{FUNCTIONS["transform_commits"]}?limit=20000" -H "Content-Type: application/json" -d \'{{}}\''
     )
 
+    transform_readme = BashOperator(
+        task_id="transform_readme_summary",
+        bash_command=f'curl -X POST "{FUNCTIONS["transform_readme"]}" -H "Content-Type: application/json" -d \'{{}}\''
+    )
+
+    transform_languages = BashOperator(
+        task_id="transform_language_summary",
+        bash_command=f'curl -X POST "{FUNCTIONS["transform_languages"]}" -H "Content-Type: application/json" -d \'{{}}\''
+    )
+
+    # DAG dependencies
     # DAG dependencies
     schema_setup >> extract_repos
-    extract_repos >> [extract_contributors, extract_commits, extract_readme]
-    [extract_contributors, extract_commits, extract_readme] >> parse_github
-    parse_github >> [transform_repos, transform_contributors, transform_commits]
+    extract_repos >> [extract_contributors, extract_commits, extract_readme, extract_languages]
+    [extract_contributors, extract_commits, extract_readme, extract_languages] >> parse_github
+    parse_github >> [transform_repos, transform_contributors, transform_commits, transform_readme, transform_languages]
