@@ -36,7 +36,7 @@ def task(request):
     run_date = datetime.datetime.utcnow().strftime("%Y%m%d")
 
     # flexible limit
-    limit = int(request.args.get("limit", 200))
+    limit = int(request.args.get("limit", 300))
     repo_file_path = f"raw/github_repos_raw/date={run_date}/repos_{limit}.json"
 
     print(f"Reading repo list from gs://{BUCKET_NAME}/{repo_file_path}")

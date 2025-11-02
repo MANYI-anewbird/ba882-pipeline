@@ -29,10 +29,12 @@ def task(request):
         bq_client.create_dataset(target_dataset_ref)
         print(f"Created dataset: {TARGET_DATASET}")
     
+   
     run_date = request.args.get("date") or datetime.datetime.utcnow().strftime("%Y%m%d")
-    limit = int(request.args.get("limit", 20000))
+    repo_limit = int(request.args.get("limit", 300))  
+    commit_limit = repo_limit * 100  
     
-    print(f"Processing snapshot_date={run_date}, limit={limit}")
+    print(f"Processing snapshot_date={run_date}, repo_limit={repo_limit}, commit_limit={commit_limit}")
     
     transform_query = f"""
     CREATE OR REPLACE TABLE `{PROJECT_ID}.{TARGET_DATASET}.{TARGET_TABLE}` AS
@@ -115,8 +117,8 @@ def task(request):
     FROM parsed_commits
     WHERE NOT is_bot_commit
     ORDER BY commit_timestamp DESC
-    LIMIT {{limit}}
-    """
+    LIMIT {commit_limit}
+    """  # 
     
     try:
         query_job = bq_client.query(transform_query)
@@ -142,7 +144,9 @@ def task(request):
             "total_repos": stats_result.total_repos,
             "unique_authors": stats_result.unique_authors,
             "merge_commits": stats_result.merge_commits,
-            "snapshot_date": run_date
+            "snapshot_date": run_date,
+            "repo_limit": repo_limit,
+            "commit_limit": commit_limit
         }, 200
         
     except Exception as e:
