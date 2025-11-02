@@ -29,7 +29,7 @@ def task(request):
     print("success: Retrieved GitHub token from Secret Manager")
 
     # Step 2️ — Determine how many repos to fetch
-    limit = int(request.args.get("limit", 200))  # default = 200
+    limit = int(request.args.get("limit", 300))  # default = 200
     per_page = 100
     total_pages = (limit // per_page) + (1 if limit % per_page else 0)
     print(f"success: Will fetch top {limit} repositories ({total_pages} pages)")

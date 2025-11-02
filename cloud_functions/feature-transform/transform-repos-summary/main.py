@@ -26,20 +26,27 @@ def task(request):
     
     try:
         bq_client.get_dataset(target_dataset_ref)
-        print(f"success:ataset {TARGET_DATASET} already exists")
+        print(f"success: Dataset {TARGET_DATASET} already exists")
     except:
         bq_client.create_dataset(target_dataset_ref)
-        print(f"success:Created dataset: {TARGET_DATASET}")
+        print(f"success: Created dataset: {TARGET_DATASET}")
     
     # Step 2: Get parameters
     run_date = request.args.get("date") or datetime.datetime.utcnow().strftime("%Y%m%d")
-    limit = int(request.args.get("limit", 1000))
+    limit = int(request.args.get("limit", 300))
     
     print(f"Processing snapshot_date={run_date}, limit={limit}")
     
-    # Step 3: Transform query
+    # Step 3: Transform query with deduplication
     transform_query = f"""
     CREATE OR REPLACE TABLE `{PROJECT_ID}.{TARGET_DATASET}.{TARGET_TABLE}` AS
+    WITH deduplicated_repos AS (
+        SELECT 
+            *,
+            ROW_NUMBER() OVER (PARTITION BY full_name ORDER BY updated_at DESC) as row_num
+        FROM `{PROJECT_ID}.{SOURCE_DATASET}.{SOURCE_TABLE}`
+        WHERE snapshot_date = {run_date}
+    )
     SELECT 
         full_name as name,
         stargazers_count as stars,
@@ -50,17 +57,12 @@ def task(request):
         updated_at,
         snapshot_date,
         created_at,
-        
-        -- Additional useful fields
         watchers_count as watchers,
         open_issues_count as open_issues,
-        
-        -- Computed fields
         DATE_DIFF(CURRENT_DATE(), DATE(created_at), DAY) as repo_age_days,
         ROUND(stargazers_count / NULLIF(DATE_DIFF(CURRENT_DATE(), DATE(created_at), DAY), 0), 2) as stars_per_day
-        
-    FROM `{PROJECT_ID}.{SOURCE_DATASET}.{SOURCE_TABLE}`
-    WHERE snapshot_date = {run_date}
+    FROM deduplicated_repos
+    WHERE row_num = 1
     ORDER BY stargazers_count DESC
     LIMIT {limit}
     """

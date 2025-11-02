@@ -34,7 +34,7 @@ def task(request):
     bucket = storage_client.bucket(BUCKET_NAME)
 
     run_date = datetime.datetime.utcnow().strftime("%Y%m%d")
-    limit = int(request.args.get("limit", 200))  # allow ?limit=300
+    limit = int(request.args.get("limit", 300))  # allow ?limit=300
     repo_file_path = f"raw/github_repos_raw/date={run_date}/repos_{limit}.json"
 
     print(f"Reading repo list from gs://{BUCKET_NAME}/{repo_file_path}")

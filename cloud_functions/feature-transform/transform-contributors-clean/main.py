@@ -35,11 +35,12 @@ def task(request):
         bq_client.create_dataset(target_dataset_ref)
         print(f"Created dataset: {TARGET_DATASET}")
     
-    # Step 2: Get parameters
+    # Step 2: Get parameters 
     run_date = request.args.get("date") or datetime.datetime.utcnow().strftime("%Y%m%d")
-    limit = int(request.args.get("limit", 10000))
+    repo_limit = int(request.args.get("limit", 300))  # 
+    contributor_limit = repo_limit * 50  #
     
-    print(f"Processing snapshot_date={run_date}, limit={limit}")
+    print(f"Processing snapshot_date={run_date}, repo_limit={repo_limit}, contributor_limit={contributor_limit}")
     
     # Step 3: Transform query with deduplication and ranking
     transform_query = f"""
@@ -102,8 +103,8 @@ def task(request):
     FROM ranked_contributors
     WHERE data_quality_flag = 'valid'  -- Keep only valid data
     ORDER BY repo_full_name, contribution_rank
-    LIMIT {limit}
-    """
+    LIMIT {contributor_limit}
+    """  # 
     
     # Step 4: Execute transformation
     try:
@@ -132,7 +133,9 @@ def task(request):
             "total_repos": stats_result.total_repos,
             "unique_contributors": stats_result.unique_contributors,
             "core_contributors": stats_result.core_contributors,
-            "snapshot_date": run_date
+            "snapshot_date": run_date,
+            "repo_limit": repo_limit,
+            "contributor_limit": contributor_limit
         }, 200
         
     except Exception as e:
