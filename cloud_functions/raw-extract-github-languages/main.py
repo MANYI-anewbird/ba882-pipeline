@@ -21,7 +21,7 @@ def task(request):
     print("✓ Retrieved GitHub token")
 
     # Get parameters
-    limit = int(request.args.get("limit", 200))
+    limit = int(request.args.get("limit", 300))
     run_date = datetime.datetime.utcnow().strftime("%Y%m%d")
     print(f"✓ Will process {limit} repositories for date={run_date}")
 

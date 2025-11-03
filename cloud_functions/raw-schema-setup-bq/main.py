@@ -125,6 +125,31 @@ def task(request):
             bigquery.SchemaField("commit_date", "TIMESTAMP"),
             bigquery.SchemaField("html_url", "STRING"),
             bigquery.SchemaField("snapshot_date", "INTEGER")
+        ],
+
+        "github_languages_raw": [
+            bigquery.SchemaField("repo_full_name", "STRING"),
+            bigquery.SchemaField("language", "STRING"),
+            bigquery.SchemaField("bytes", "INTEGER"),
+            bigquery.SchemaField("extracted_at", "TIMESTAMP"),
+            bigquery.SchemaField("snapshot_date", "INTEGER"),
+        ],
+
+        "github_readme_raw": [
+            bigquery.SchemaField("repo_full_name", "STRING"),
+            bigquery.SchemaField("name", "STRING"),
+            bigquery.SchemaField("path", "STRING"),
+            bigquery.SchemaField("sha", "STRING"),
+            bigquery.SchemaField("size", "INTEGER"),
+            bigquery.SchemaField("url", "STRING"),
+            bigquery.SchemaField("html_url", "STRING"),
+            bigquery.SchemaField("git_url", "STRING"),
+            bigquery.SchemaField("download_url", "STRING"),
+            bigquery.SchemaField("type", "STRING"),
+            bigquery.SchemaField("content", "STRING"),
+            bigquery.SchemaField("encoding", "STRING"),
+            bigquery.SchemaField("extracted_at", "TIMESTAMP"),
+            bigquery.SchemaField("snapshot_date", "INTEGER"),
         ]
     }
 
