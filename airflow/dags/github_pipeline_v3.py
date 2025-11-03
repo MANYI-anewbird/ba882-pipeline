@@ -20,13 +20,15 @@ FUNCTIONS = {
     "extract_contributors": "https://raw-extract-github-contributors-qentqpf6ya-uc.a.run.app",
     "extract_commits": "https://raw-extract-github-commits-qentqpf6ya-uc.a.run.app",
     "extract_readme": "https://raw-extract-github-readme-643469687953.us-central1.run.app",
+    "extract_languages": "https://raw-extract-github-languages-qentqpf6ya-uc.a.run.app", 
     "parse_github": "https://raw-parse-github-qentqpf6ya-uc.a.run.app",
     
     # Transform layer functions
     "transform_repos": "https://us-central1-ba-882-fall25-team8.cloudfunctions.net/transform-repos-summary",
     "transform_contributors": "https://us-central1-ba-882-fall25-team8.cloudfunctions.net/transform-contributors-clean",
     "transform_commits": "https://us-central1-ba-882-fall25-team8.cloudfunctions.net/transform-commits-clean",
-    "transform_repos_ml": "https://us-central1-ba-882-fall25-team8.cloudfunctions.net/transform-repos-ml",  # ✅ 新增
+    "transform_repos_ml": "https://us-central1-ba-882-fall25-team8.cloudfunctions.net/transform-repos-ml",
+    "transform_languages": "https://us-central1-ba-882-fall25-team8.cloudfunctions.net/transform-language-summary",  
 }
 
 with DAG(
@@ -35,7 +37,7 @@ with DAG(
     start_date=datetime(2024, 10, 16),
     schedule="@weekly",
     catchup=False,
-    tags=["github", "pipeline", "ml"], 
+    tags=["github", "pipeline", "ml", "languages"], 
 ) as dag:
 
     schema_setup = BashOperator(
@@ -63,6 +65,11 @@ with DAG(
         bash_command=f'curl -X POST "{FUNCTIONS["extract_readme"]}?limit=300" -H "Content-Type: application/json" -d \'{{}}\''
     )
 
+    extract_languages = BashOperator(
+        task_id="extract_github_languages",
+        bash_command=f'curl -X POST "{FUNCTIONS["extract_languages"]}?limit=300" -H "Content-Type: application/json" -d \'{{}}\''
+    )
+
     parse_github = BashOperator(
         task_id="parse_github_data",
         bash_command=f'curl -X POST "{FUNCTIONS["parse_github"]}?limit=300" -H "Content-Type: application/json" -d \'{{}}\''
@@ -84,14 +91,18 @@ with DAG(
         bash_command=f'curl -X POST "{FUNCTIONS["transform_commits"]}?limit=300" -H "Content-Type: application/json" -d \'{{}}\''
     )
 
-
     transform_repos_ml = BashOperator(
         task_id="transform_repos_ml",
         bash_command=f'curl -X POST "{FUNCTIONS["transform_repos_ml"]}" -H "Content-Type: application/json" -d \'{{}}\''
     )
 
+    transform_languages = BashOperator(
+        task_id="transform_language_summary",
+        bash_command=f'curl -X POST "{FUNCTIONS["transform_languages"]}" -H "Content-Type: application/json" -d \'{{}}\''
+    )
+
     # DAG dependencies
     schema_setup >> extract_repos
-    extract_repos >> [extract_contributors, extract_commits, extract_readme]
-    [extract_contributors, extract_commits, extract_readme] >> parse_github
-    parse_github >> [transform_repos, transform_contributors, transform_commits, transform_repos_ml]  # 
+    extract_repos >> [extract_contributors, extract_commits, extract_readme, extract_languages] 
+    [extract_contributors, extract_commits, extract_readme, extract_languages] >> parse_github 
+    parse_github >> [transform_repos, transform_contributors, transform_commits, transform_repos_ml, transform_languages]  
