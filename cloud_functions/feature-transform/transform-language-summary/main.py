@@ -1,17 +1,17 @@
 import functions_framework
 from google.cloud import bigquery
 
-PROJECT_ID = "ba-882-fall25-team8"ç
+PROJECT_ID = "ba-882-fall25-team8"
 RAW_DATASET = "raw_github_data"
 CLEAN_DATASET = "cleaned_github_data"
 
 @functions_framework.http
 def task(request):
     """Transform language data into summary with percentages and diversity metrics"""
-
+    
     print("Starting language transformation...")
     client = bigquery.Client()
-
+    
     # Ensure cleaned dataset exists
     dataset_ref = bigquery.Dataset(f"{PROJECT_ID}.{CLEAN_DATASET}")
     try:
@@ -20,7 +20,7 @@ def task(request):
     except Exception:
         client.create_dataset(dataset_ref, exists_ok=True)
         print(f"✓ Created dataset {CLEAN_DATASET}")
-
+    
     query = f"""
     CREATE OR REPLACE TABLE `{PROJECT_ID}.{CLEAN_DATASET}.language_summary` AS
     WITH language_totals AS (
@@ -28,10 +28,6 @@ def task(request):
         repo_full_name,
         SUM(bytes) as total_bytes
       FROM `{PROJECT_ID}.{RAW_DATASET}.github_languages_raw`
-      WHERE snapshot_date = (
-          SELECT MAX(snapshot_date) 
-          FROM `{PROJECT_ID}.{RAW_DATASET}.github_languages_raw`
-      )
       GROUP BY repo_full_name
     ),
     language_details AS (
@@ -42,10 +38,6 @@ def task(request):
         ROUND(l.bytes / lt.total_bytes * 100, 2) as percentage,
         ROW_NUMBER() OVER (PARTITION BY l.repo_full_name ORDER BY l.bytes DESC) as language_rank
       FROM `{PROJECT_ID}.{RAW_DATASET}.github_languages_raw` l
-      WHERE l.snapshot_date = (
-          SELECT MAX(snapshot_date) 
-          FROM `{PROJECT_ID}.{RAW_DATASET}.github_languages_raw`
-      )
       JOIN language_totals lt ON l.repo_full_name = lt.repo_full_name
     )
     SELECT 
@@ -80,18 +72,18 @@ def task(request):
     FROM language_details
     GROUP BY repo_full_name
     """
-
+    
     print("Executing transformation query...")
     job = client.query(query)
     result = job.result()
-
+    
     # Get row count
     count_query = f"SELECT COUNT(*) as count FROM `{PROJECT_ID}.{CLEAN_DATASET}.language_summary`"
     count_result = client.query(count_query).result()
     row_count = list(count_result)[0].count
-
+    
     print(f"✓ Created language_summary table with {row_count} rows")
-
+    
     return {
         "message": f"Language transformation complete! Created {row_count} summaries.",
         "table": f"{PROJECT_ID}.{CLEAN_DATASET}.language_summary",
