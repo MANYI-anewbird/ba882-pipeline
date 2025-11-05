@@ -28,7 +28,8 @@ FUNCTIONS = {
     "transform_contributors": "https://us-central1-ba-882-fall25-team8.cloudfunctions.net/transform-contributors-clean",
     "transform_commits": "https://us-central1-ba-882-fall25-team8.cloudfunctions.net/transform-commits-clean",
     "transform_repos_ml": "https://us-central1-ba-882-fall25-team8.cloudfunctions.net/transform-repos-ml",
-    "transform_languages": "https://us-central1-ba-882-fall25-team8.cloudfunctions.net/transform-language-summary",  
+    "transform_languages": "https://us-central1-ba-882-fall25-team8.cloudfunctions.net/transform-language-summary",
+    "transform_readme": "https://transform-readme-summary-qentqpf6ya-uc.a.run.app",
 }
 
 with DAG(
@@ -45,6 +46,7 @@ with DAG(
         bash_command=f'curl -X POST "{FUNCTIONS["schema_setup"]}" -H "Content-Type: application/json" -d \'{{}}\''
     )
 
+    # Extraction layer - fetch top 300 repos weekly
     extract_repos = BashOperator(
         task_id="extract_github_repos",
         bash_command=f'curl -X POST "{FUNCTIONS["extract_repos"]}?limit=300" -H "Content-Type: application/json" -d \'{{}}\''
@@ -75,20 +77,20 @@ with DAG(
         bash_command=f'curl -X POST "{FUNCTIONS["parse_github"]}?limit=300" -H "Content-Type: application/json" -d \'{{}}\''
     )
 
-    # Transform layer tasks
+    # Transform layer - process ALL accumulated historical data
     transform_repos = BashOperator(
         task_id="transform_repos_summary",
-        bash_command=f'curl -X POST "{FUNCTIONS["transform_repos"]}?limit=300" -H "Content-Type: application/json" -d \'{{}}\''
+        bash_command=f'curl -X POST "{FUNCTIONS["transform_repos"]}" -H "Content-Type: application/json" -d \'{{}}\''
     )
 
     transform_contributors = BashOperator(
         task_id="transform_contributors_clean",
-        bash_command=f'curl -X POST "{FUNCTIONS["transform_contributors"]}?limit=300" -H "Content-Type: application/json" -d \'{{}}\''
+        bash_command=f'curl -X POST "{FUNCTIONS["transform_contributors"]}" -H "Content-Type: application/json" -d \'{{}}\''
     )
 
     transform_commits = BashOperator(
         task_id="transform_commits_clean",
-        bash_command=f'curl -X POST "{FUNCTIONS["transform_commits"]}?limit=300" -H "Content-Type: application/json" -d \'{{}}\''
+        bash_command=f'curl -X POST "{FUNCTIONS["transform_commits"]}" -H "Content-Type: application/json" -d \'{{}}\''
     )
 
     transform_repos_ml = BashOperator(
@@ -101,8 +103,13 @@ with DAG(
         bash_command=f'curl -X POST "{FUNCTIONS["transform_languages"]}" -H "Content-Type: application/json" -d \'{{}}\''
     )
 
+    transform_readme = BashOperator(
+        task_id="transform_readme_summary",
+        bash_command=f'curl -X POST "{FUNCTIONS["transform_readme"]}" -H "Content-Type: application/json" -d \'{{}}\''
+    )
+
     # DAG dependencies
     schema_setup >> extract_repos
     extract_repos >> [extract_contributors, extract_commits, extract_readme, extract_languages] 
     [extract_contributors, extract_commits, extract_readme, extract_languages] >> parse_github 
-    parse_github >> [transform_repos, transform_contributors, transform_commits, transform_repos_ml, transform_languages]  
+    parse_github >> [transform_repos, transform_contributors, transform_commits, transform_repos_ml, transform_languages, transform_readme]

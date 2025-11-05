@@ -35,8 +35,8 @@ def task(request):
         "github_repos_raw": f"raw/github_repos_raw/date={run_date}/repos_{limit}.json",
         "github_contributors_raw": f"raw/github_contributors_raw/date={run_date}/contributors_{limit}.json",
         "github_commits_raw": f"raw/github_commits_raw/date={run_date}/commits_{limit}.json",
-        "github_readme_raw": f"raw/github_readme_raw/date={run_date}/readmes_{limit}.json",
         "github_languages_raw": f"raw/github_languages_raw/date={run_date}/languages_{limit}.json",
+        "github_readme_raw": f"raw/github_readme_raw/date={run_date}/readmes_{limit}.json",
     }
 
     for table_name, file_path in files.items():
