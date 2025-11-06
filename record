@@ -1,0 +1,56 @@
+astro login -t eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IjRmeDJYNVFNa2o3Q25ycVNyX1ZuTyJ9.eyJodHRwczovL2FzdHJvbm9tZXIuaW8vand0L2F1dGhfY29ubmVjdGlvbiI6eyJpZCI6ImNvbl9VazNBeTNDZGZ4Q1J5Z3BmIiwibmFtZSI6Imdvb2dsZS1vYXV0aDIiLCJzdHJhdGVneSI6Imdvb2dsZS1vYXV0aDIifSwiaXNzIjoiaHR0cHM6Ly9hdXRoLmFzdHJvbm9tZXIuaW8vIiwic3ViIjoiZ29vZ2xlLW9hdXRoMnwxMTA5MjE1NDA1NTE1MjU2NTE5MTIiLCJhdWQiOlsiYXN0cm9ub21lci1lZSIsImh0dHBzOi8vYXN0cm9ub21lci1wcm9kLnVzLmF1dGgwLmNvbS91c2VyaW5mbyJdLCJpYXQiOjE3NjI0NjMyMjIsImV4cCI6MTc2MjQ2NjgyMiwic2NvcGUiOiJvcGVuaWQgcHJvZmlsZSBlbWFpbCBvZmZsaW5lX2FjY2VzcyIsImF6cCI6IllxOWF0WVhUZWY2dGVaWUpYa3dsUWw2bFhwTktrejh1IiwicGVybWlzc2lvbnMiOltdfQ.cWrXWBQA6FBsm60WLOsX88mByASatVaujVPm0-Zatcuu7SstPOymJQuI_pZWisdvrRC7Kf3zVynLi-cA-BfdD05UEhn6_3OmzT6pL3xP2Y-xXcJ-V8R4JZwrKFE7Xd71T9AmG-8LNA0Vi_q95EPi8FnB9xPXWLkpgXvB_ZkpCUBzwDHL1eWqMOP5NgQfk4-BcwRlWt-rXOmz_mi63EaU6oVPq3Nx79oLEq7GqREFoNYNIngJFMudA84wTTyDneE17oE4dw7x92BvNBMI4naVCz-E7ob9LpUzgQS8gx5xPC6T2AmEumzrvgZwgJosIlljWVf_DKPJ4xntZNwqUpn62A
+gcloud functions deploy transform-repo-category \
+  --region=us-central1 \
+  --runtime=python310 \
+  --trigger-http \
+  --allow-unauthenticated \
+  --entry-point=task \
+  --set-env-vars OPENAI_API_KEY="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" \
+  --project=ba-882-fall25-team8
+
+  cd ~/ba882-pipeline/cloud_functions/feature-transform/transform-repo-category
+
+gcloud functions deploy transform-repo-category \
+  --gen2 \
+  --region=us-central1 \
+  --runtime=python310 \
+  --trigger-http \
+  --allow-unauthenticated \
+  --entry-point=task \
+  --set-env-vars OPENAI_API_KEY="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" \
+  --project=ba-882-fall25-team8 \
+  --timeout=540
+
+gcloud functions deploy transform-repo-category \
+  --gen2 \
+  --region=us-central1 \
+  --runtime=python310 \
+  --trigger-http \
+  --allow-unauthenticated \
+  --entry-point=task \
+  --set-env-vars OPENAI_API_KEY="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" \
+  --project=ba-882-fall25-team8 \
+  --timeout=540
+
+gcloud functions deploy transform-repo-category \
+  --gen2 \
+  --region=us-central1 \
+  --runtime=python310 \
+  --trigger-http \
+  --allow-unauthenticated \
+  --entry-point=task \
+  --set-env-vars OPENAI_API_KEY="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" \
+  --project=ba-882-fall25-team8 \
+  --timeout=540
+
+  gcloud functions deploy transform-repo-category \
+  --gen2 \
+  --region=us-central1 \
+  --runtime=python310 \
+  --trigger-http \
+  --allow-unauthenticated \
+  --entry-point=task \
+  --set-env-vars OPENAI_API_KEY="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" \
+  --project=ba-882-fall25-team8 \
+  --timeout=540
+
