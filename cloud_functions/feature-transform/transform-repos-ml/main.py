@@ -1,168 +1,88 @@
-# === Function: Transform Repos for Machine Learning ===
 import functions_framework
 from google.cloud import bigquery
-import datetime
 
-# === CONFIGURATION ===
 PROJECT_ID = "ba-882-fall25-team8"
-SOURCE_DATASET = "raw_github_data"
-TARGET_DATASET = "ml_github_data"
-SOURCE_TABLE = "github_repos_raw"
-TARGET_TABLE = "repos_for_ml"
+DATASET = "cleaned_github_data"
+OUTPUT_TABLE = f"{PROJECT_ID}.{DATASET}.repo_ml_dataset"
+
+client_bq = bigquery.Client()
+
 
 @functions_framework.http
 def task(request):
+    print("🚀 Starting ML dataset aggregation...")
+
+    query = f"""
+        CREATE OR REPLACE TABLE `{OUTPUT_TABLE}` AS
+        WITH commits AS (
+            SELECT
+                repo_full_name,
+                COUNT(*) AS total_commits,
+                AVG(message_length) AS avg_message_length,
+                AVG(CASE WHEN is_merge_commit THEN 1 ELSE 0 END) AS merge_commit_ratio,
+                AVG(CASE WHEN is_bot_commit THEN 1 ELSE 0 END) AS bot_commit_ratio
+            FROM `{PROJECT_ID}.{DATASET}.commits_clean`
+            GROUP BY repo_full_name
+        ),
+        contributors AS (
+            SELECT
+                repo_full_name,
+                COUNT(DISTINCT contributor_login) AS total_contributors,
+                AVG(contributions) AS avg_contributions_per_person,
+                AVG(CASE WHEN is_core_contributor THEN 1 ELSE 0 END) AS core_contributor_ratio
+            FROM `{PROJECT_ID}.{DATASET}.contributors_clean`
+            GROUP BY repo_full_name
+        )
+        SELECT
+            r.name AS repo_name,
+            r.url AS repo_url,
+            r.language AS main_language,
+            r.stars AS stars_count,
+            r.forks AS forks_count,
+            r.watchers,
+            r.open_issues,
+            r.repo_age_days,
+            r.stars_per_day,
+            COALESCE(c.total_commits, 0) AS total_commits,
+            COALESCE(c.avg_message_length, 0) AS avg_message_length,
+            COALESCE(c.merge_commit_ratio, 0) AS merge_commit_ratio,
+            COALESCE(c.bot_commit_ratio, 0) AS bot_commit_ratio,
+            COALESCE(ct.total_contributors, 0) AS total_contributors,
+            COALESCE(ct.avg_contributions_per_person, 0) AS avg_contributions_per_person,
+            COALESCE(ct.core_contributor_ratio, 0) AS core_contributor_ratio,
+            COALESCE(l.primary_language, r.language) AS primary_language,
+            COALESCE(l.primary_language_pct, 0.0) AS primary_language_pct,
+            COALESCE(l.language_count, 0) AS language_count,
+            COALESCE(l.languages_above_10_percent, 0) AS languages_above_10_percent,
+            COALESCE(l.has_javascript, FALSE) AS has_javascript,
+            COALESCE(l.has_compiled_language, FALSE) AS has_compiled_language,
+            SAFE_DIVIDE(c.total_commits, NULLIF(ct.total_contributors, 0)) AS commits_per_contributor,
+            SAFE_DIVIDE(r.forks, NULLIF(r.stars, 0)) AS forks_per_star,
+            CURRENT_TIMESTAMP() AS transformed_at
+        FROM `{PROJECT_ID}.{DATASET}.repos_summary` r
+        LEFT JOIN commits c
+            ON r.name = c.repo_full_name
+        LEFT JOIN contributors ct
+            ON r.name = ct.repo_full_name
+        LEFT JOIN `{PROJECT_ID}.{DATASET}.language_summary` l
+            ON r.name = l.repo_full_name
     """
-    Cloud Function: Create ML-ready repos dataset
-    - Deduplicates across all historical snapshots
-    - Keeps only the latest version of each unique repo
-    - Provides comprehensive dataset for machine learning
-    """
-    print("Starting repos ML transformation...")
-    
-    bq_client = bigquery.Client(project=PROJECT_ID)
-    
-    # Step 1: Ensure target dataset exists
-    target_dataset_ref = bigquery.Dataset(f"{PROJECT_ID}.{TARGET_DATASET}")
-    target_dataset_ref.location = "US"
-    
+
     try:
-        bq_client.get_dataset(target_dataset_ref)
-        print(f"Dataset {TARGET_DATASET} already exists")
-    except:
-        bq_client.create_dataset(target_dataset_ref)
-        print(f"Created dataset: {TARGET_DATASET}")
-    
-    # Step 2: Transform query - deduplicate across all history
-    transform_query = f"""
-    CREATE OR REPLACE TABLE `{PROJECT_ID}.{TARGET_DATASET}.{TARGET_TABLE}` AS
-    WITH ranked_repos AS (
-        SELECT 
-            full_name,
-            stargazers_count,
-            forks_count,
-            COALESCE(language, 'Unknown') as language,
-            COALESCE(description, 'No description provided') as description,
-            html_url,
-            updated_at,
-            snapshot_date,
-            created_at,
-            watchers_count,
-            open_issues_count,
-            open_issues,
-            size,
-            default_branch,
-            topics,
-            has_issues,
-            has_projects,
-            has_wiki,
-            has_pages,
-            has_downloads,
-            archived,
-            disabled,
-            visibility,
-            pushed_at,
-            -- Rank: latest version of each repo
-            ROW_NUMBER() OVER (
-                PARTITION BY full_name 
-                ORDER BY snapshot_date DESC, updated_at DESC
-            ) as row_num
-        FROM `{PROJECT_ID}.{SOURCE_DATASET}.{SOURCE_TABLE}`
-    )
-    SELECT 
-        full_name as name,
-        stargazers_count as stars,
-        forks_count as forks,
-        language,
-        description,
-        html_url as url,
-        updated_at,
-        snapshot_date,
-        created_at,
-        watchers_count as watchers,
-        open_issues_count as open_issues,
-        size as repo_size_kb,
-        default_branch,
-        topics,
-        has_issues,
-        has_projects,
-        has_wiki,
-        has_pages,
-        has_downloads,
-        archived,
-        disabled,
-        visibility,
-        pushed_at,
-        
-        -- Computed fields for ML
-        DATE_DIFF(CURRENT_DATE(), DATE(created_at), DAY) as repo_age_days,
-        DATE_DIFF(CURRENT_DATE(), DATE(pushed_at), DAY) as days_since_last_push,
-        DATE_DIFF(DATE(updated_at), DATE(created_at), DAY) as days_active,
-        ROUND(stargazers_count / NULLIF(DATE_DIFF(CURRENT_DATE(), DATE(created_at), DAY), 0), 2) as stars_per_day,
-        ROUND(forks_count / NULLIF(DATE_DIFF(CURRENT_DATE(), DATE(created_at), DAY), 0), 2) as forks_per_day,
-        ROUND(SAFE_DIVIDE(stargazers_count, NULLIF(forks_count, 0)), 2) as stars_to_forks_ratio,
-        
-        -- Categorical features
-        CASE 
-            WHEN language IS NULL OR language = 'Unknown' THEN 'Other'
-            ELSE language 
-        END as language_clean,
-        
-        CASE 
-            WHEN stargazers_count >= 50000 THEN 'Very High'
-            WHEN stargazers_count >= 20000 THEN 'High'
-            WHEN stargazers_count >= 10000 THEN 'Medium'
-            ELSE 'Low'
-        END as popularity_tier,
-        
-        CASE 
-            WHEN DATE_DIFF(CURRENT_DATE(), DATE(pushed_at), DAY) <= 7 THEN 'Very Active'
-            WHEN DATE_DIFF(CURRENT_DATE(), DATE(pushed_at), DAY) <= 30 THEN 'Active'
-            WHEN DATE_DIFF(CURRENT_DATE(), DATE(pushed_at), DAY) <= 90 THEN 'Moderate'
-            ELSE 'Inactive'
-        END as activity_level
-        
-    FROM ranked_repos
-    WHERE row_num = 1
-    ORDER BY stars DESC
-    """
-    
-    # Step 3: Execute transformation
-    try:
-        query_job = bq_client.query(transform_query)
-        query_job.result()  # Wait for completion
-        
-        # Get statistics
-        stats_query = f"""
-        SELECT 
-            COUNT(*) as total_repos,
-            COUNT(DISTINCT language_clean) as unique_languages,
-            COUNT(DISTINCT snapshot_date) as snapshots_covered,
-            MIN(snapshot_date) as earliest_snapshot,
-            MAX(snapshot_date) as latest_snapshot,
-            AVG(stars) as avg_stars,
-            AVG(forks) as avg_forks
-        FROM `{PROJECT_ID}.{TARGET_DATASET}.{TARGET_TABLE}`
-        """
-        stats_result = list(bq_client.query(stats_query).result())[0]
-        
-        print(f"Successfully created ML dataset")
-        print(f"Total unique repos: {stats_result.total_repos}")
-        
+        job = client_bq.query(query)
+        job.result()
+        print(f"✅ Successfully created table: {OUTPUT_TABLE}")
+
+        result = list(client_bq.query(
+            f"SELECT COUNT(*) AS total_rows FROM `{OUTPUT_TABLE}`"
+        ).result())[0]
+        row_count = result.total_rows
+
         return {
-            "message": "ML repos dataset created successfully!",
-            "dataset": TARGET_DATASET,
-            "table": TARGET_TABLE,
-            "total_repos": stats_result.total_repos,
-            "unique_languages": stats_result.unique_languages,
-            "snapshots_covered": stats_result.snapshots_covered,
-            "earliest_snapshot": str(stats_result.earliest_snapshot),
-            "latest_snapshot": str(stats_result.latest_snapshot),
-            "avg_stars": float(stats_result.avg_stars),
-            "avg_forks": float(stats_result.avg_forks)
+            "message": f"Repo ML dataset created successfully with {row_count} rows.",
+            "output_table": OUTPUT_TABLE
         }, 200
-        
+
     except Exception as e:
-        error_msg = f"Transformation failed: {str(e)}"
-        print(error_msg)
-        return {"error": error_msg}, 500
+        print("❌ Error:", str(e))
+        return {"status": "error", "details": str(e)}, 500
