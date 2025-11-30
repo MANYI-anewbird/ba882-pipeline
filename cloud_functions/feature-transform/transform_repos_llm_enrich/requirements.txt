@@ -1,0 +1,8 @@
+functions-framework==3.5.0
+google-cloud-bigquery==3.20.1
+google-cloud-storage==2.14.0
+pandas==2.2.2
+requests==2.31.0
+openai==1.23.6
+db-dtypes==1.2.0
+

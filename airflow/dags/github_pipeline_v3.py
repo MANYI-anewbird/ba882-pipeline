@@ -13,27 +13,40 @@ SLACK_WEBHOOK_URL = "https://hooks.slack.com/services/T09REGHHCMA/B09RB2VKFM0/8z
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "email": ["hmy@bu.edu", "ebaykurt@bu.edu", "zehui@bu.edu", "sanjal@bu.edu"], 
+    "email": ["hmy@bu.edu", "ebaykurt@bu.edu", "zehui@bu.edu", "sanjal@bu.edu"],
     "email_on_failure": True,
     "email_on_retry": False,
-    "retries": 1,
+    "retries": 0,
 }
 
 # ===== Cloud Functions URLs =====
 FUNCTIONS = {
+    # Extract layer
     "schema_setup": "https://raw-schema-setup-bq-qentqpf6ya-uc.a.run.app",
     "extract_repos": "https://raw-extract-github-repos-qentqpf6ya-uc.a.run.app",
     "extract_contributors": "https://raw-extract-github-contributors-qentqpf6ya-uc.a.run.app",
     "extract_commits": "https://raw-extract-github-commits-qentqpf6ya-uc.a.run.app",
     "extract_readme": "https://raw-extract-github-readme-643469687953.us-central1.run.app",
     "extract_languages": "https://raw-extract-github-languages-qentqpf6ya-uc.a.run.app",
+
+    # Parse
     "parse_github": "https://raw-parse-github-qentqpf6ya-uc.a.run.app",
+
+    # Transform (summary)
     "transform_repos": "https://us-central1-ba-882-fall25-team8.cloudfunctions.net/transform-repos-summary",
     "transform_contributors": "https://us-central1-ba-882-fall25-team8.cloudfunctions.net/transform-contributors-clean",
     "transform_commits": "https://us-central1-ba-882-fall25-team8.cloudfunctions.net/transform-commits-clean",
     "transform_languages": "https://us-central1-ba-882-fall25-team8.cloudfunctions.net/transform-language-summary",
-    "transform_repos_ml": "https://us-central1-ba-882-fall25-team8.cloudfunctions.net/transform-repo-ml",
-    "ml_cluster_repos": "https://us-central1-ba-882-fall25-team8.cloudfunctions.net/ml-cluster-repos",
+
+    # NEW: LLM enrich & ML ready
+    "transform_repos_llm_enrich": "https://us-central1-ba-882-fall25-team8.cloudfunctions.net/transform_repos_llm_enrich",
+    "repo_ml_ready": "https://us-central1-ba-882-fall25-team8.cloudfunctions.net/transform_repos_ml_ready",
+
+    # NEW: Final numeric encoding
+    "ml_transform_final": "https://us-central1-ba-882-fall25-team8.cloudfunctions.net/ml_transform_final",
+
+    # ML model
+    "ml_cluster_repos": "https://us-central1-ba-882-fall25-team8.cloudfunctions.net/transform_cluster_repos",
 }
 
 # ===== Slack notification template =====
@@ -72,6 +85,7 @@ def slack_notify(status: str, color: str, message: str):
     }}' {SLACK_WEBHOOK_URL}
     """
 
+
 # ===== Define DAG =====
 with DAG(
     dag_id="github_data_pipeline_v3",
@@ -79,69 +93,83 @@ with DAG(
     start_date=datetime(2024, 10, 16),
     schedule="@weekly",
     catchup=False,
-    tags=["github", "pipeline", "ml", "languages"],
+    tags=["github", "pipeline", "ml", "llm"],
 ) as dag:
 
     # ===== Setup =====
     schema_setup = BashOperator(
         task_id="setup_bq_schema",
-        bash_command=f'curl -X POST "{FUNCTIONS["schema_setup"]}" -H "Content-Type: application/json" -d \'{{}}\''
+        bash_command=f'curl -X POST "{FUNCTIONS["schema_setup"]}"'
     )
 
     # ===== Extract =====
     extract_repos = BashOperator(
         task_id="extract_github_repos",
-        bash_command=f'curl -X POST "{FUNCTIONS["extract_repos"]}?limit=300" -H "Content-Type: application/json" -d \'{{}}\''
+        bash_command=f'curl -X POST "{FUNCTIONS["extract_repos"]}?limit=300"'
     )
     extract_contributors = BashOperator(
         task_id="extract_github_contributors",
-        bash_command=f'curl -X POST "{FUNCTIONS["extract_contributors"]}?limit=300" -H "Content-Type: application/json" -d \'{{}}\''
+        bash_command=f'curl -X POST "{FUNCTIONS["extract_contributors"]}?limit=300"'
     )
     extract_commits = BashOperator(
         task_id="extract_github_commits",
-        bash_command=f'curl -X POST "{FUNCTIONS["extract_commits"]}?limit=300" -H "Content-Type: application/json" -d \'{{}}\''
+        bash_command=f'curl -X POST "{FUNCTIONS["extract_commits"]}?limit=300"'
     )
     extract_readme = BashOperator(
         task_id="extract_github_readme",
-        bash_command=f'curl -X POST "{FUNCTIONS["extract_readme"]}?limit=300" -H "Content-Type: application/json" -d \'{{}}\''
+        bash_command=f'curl -X POST "{FUNCTIONS["extract_readme"]}?limit=300"'
     )
     extract_languages = BashOperator(
         task_id="extract_github_languages",
-        bash_command=f'curl -X POST "{FUNCTIONS["extract_languages"]}?limit=300" -H "Content-Type: application/json" -d \'{{}}\''
+        bash_command=f'curl -X POST "{FUNCTIONS["extract_languages"]}?limit=300"'
     )
 
     # ===== Parse =====
     parse_github = BashOperator(
         task_id="parse_github_data",
-        bash_command=f'curl -X POST "{FUNCTIONS["parse_github"]}?limit=300" -H "Content-Type: application/json" -d \'{{}}\''
+        bash_command=f'curl -X POST "{FUNCTIONS["parse_github"]}?limit=300"'
     )
 
-    # ===== Transform =====
+    # ===== Transform summary =====
     transform_repos = BashOperator(
         task_id="transform_repos_summary",
-        bash_command=f'curl -X POST "{FUNCTIONS["transform_repos"]}" -H "Content-Type: application/json" -d \'{{}}\''
+        bash_command=f'curl -X POST "{FUNCTIONS["transform_repos"]}"'
     )
     transform_contributors = BashOperator(
         task_id="transform_contributors_clean",
-        bash_command=f'curl -X POST "{FUNCTIONS["transform_contributors"]}" -H "Content-Type: application/json" -d \'{{}}\''
+        bash_command=f'curl -X POST "{FUNCTIONS["transform_contributors"]}"'
     )
     transform_commits = BashOperator(
         task_id="transform_commits_clean",
-        bash_command=f'curl -X POST "{FUNCTIONS["transform_commits"]}" -H "Content-Type: application/json" -d \'{{}}\''
+        bash_command=f'curl -X POST "{FUNCTIONS["transform_commits"]}"'
     )
     transform_languages = BashOperator(
-        task_id="transform_language_summary",
-        bash_command=f'curl -X POST "{FUNCTIONS["transform_languages"]}" -H "Content-Type: application/json" -d \'{{}}\''
-    )
-    transform_repos_ml = BashOperator(
-        task_id="transform_repos_ml",
-        bash_command=f'curl -X POST "{FUNCTIONS["transform_repos_ml"]}" -H "Content-Type: application/json" -d \'{{}}\''
+        task_id="transform_languages_summary",
+        bash_command=f'curl -X POST "{FUNCTIONS["transform_languages"]}"'
     )
 
-    # ===== ML =====
+    # ===== NEW: LLM Enrich =====
+    transform_repos_llm_enrich = BashOperator(
+         task_id="transform_repos_llm_enrich",
+         bash_command=f'curl "{FUNCTIONS["transform_repos_llm_enrich"]}?limit=300"'
+    )
+
+    # ===== NEW: Repo ML Ready =====
+    repo_ml_ready = BashOperator(
+        task_id="repo_ml_ready",
+        bash_command=f'curl -X POST "{FUNCTIONS["repo_ml_ready"]}"'
+    )
+
+    # ===== NEW: Final numeric encoding =====
+    ml_transform_final = BashOperator(
+        task_id="ml_transform_final",
+        bash_command=f'curl -X POST "{FUNCTIONS["ml_transform_final"]}"'
+    )
+
+    # ===== ML Clustering =====
     ml_cluster_repos = BashOperator(
         task_id="ml_cluster_repos",
-        bash_command=f'curl -X POST "{FUNCTIONS["ml_cluster_repos"]}" -H "Content-Type: application/json" -d \'{{}}\''
+        bash_command=f'curl -X POST "{FUNCTIONS["ml_cluster_repos"]}"'
     )
 
     # ===== Slack Notifications =====
@@ -150,10 +178,8 @@ with DAG(
         bash_command=slack_notify(
             "✅ GitHub Data Pipeline Completed Successfully!",
             "#36a64f",
-            "*DAG:* {{ dag.dag_id }}\\n"
-            "*Run ID:* {{ run_id }}\\n"
-            "*Triggered By:* {{ dag_run.conf.get('triggered_by', 'manual or schedule') }}\\n"
-            "*Output:* `ba-882-fall25-team8.ml_results.repo_cluster_summary`"
+            "*Pipeline:* github_data_pipeline_v3\n"
+            "*Output:* repo_cluster_summary"
         ),
         trigger_rule=TriggerRule.ALL_SUCCESS,
     )
@@ -163,18 +189,46 @@ with DAG(
         bash_command=slack_notify(
             "❌ GitHub Data Pipeline Failed!",
             "#ff0000",
-            "*DAG:* {{ dag.dag_id }}\\n"
-            "*Run ID:* {{ run_id }}\\n"
-            "*Failed Task:* {{ ti.task_id if ti else 'Unknown' }}"
+            "*Pipeline:* github_data_pipeline_v3\n"
+            "*Failed Task:* {{ ti.task_id }}"
         ),
         trigger_rule=TriggerRule.ONE_FAILED,
     )
 
     # ===== Dependencies =====
+
+    # Setup → Extract
     schema_setup >> extract_repos
     extract_repos >> [extract_contributors, extract_commits, extract_readme, extract_languages]
+
+    # Extract → Parse
     [extract_contributors, extract_commits, extract_readme, extract_languages] >> parse_github
-    parse_github >> [transform_repos, transform_contributors, transform_commits, transform_languages]
-    [transform_repos, transform_contributors, transform_commits, transform_languages] >> transform_repos_ml
-    transform_repos_ml >> ml_cluster_repos
+
+    # Parse → Summary transforms
+    parse_github >> [
+        transform_repos,
+        transform_contributors,
+        transform_commits,
+        transform_languages
+    ]
+
+    # Four transforms → LLM enrich
+    [
+        transform_repos,
+        transform_contributors,
+        transform_commits,
+        transform_languages
+    ] >> transform_repos_llm_enrich
+
+    # LLM → ML-ready
+    transform_repos_llm_enrich >> repo_ml_ready
+
+    # ML-ready → Numeric encoding
+    repo_ml_ready >> ml_transform_final
+
+    # Numeric → Clustering
+    ml_transform_final >> ml_cluster_repos
+
+    # → Slack notifications
     ml_cluster_repos >> [notify_success, notify_failure]
+

@@ -1,0 +1,58 @@
+cd airflow
+curl -sSL install.astronomer.io | sudo bash
+astronomer/astro-cli info Using Latest(v1.38.1) version
+astro dev start
+https://cloud.astronomer.io/token
+astro login -t eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IjRmeDJYNVFNa2o3Q25ycVNyX1ZuTyJ9.eyJodHRwczovL2FzdHJvbm9tZXIuaW8vand0L2F1dGhfY29ubmVjdGlvbiI6eyJpZCI6ImNvbl9VazNBeTNDZGZ4Q1J5Z3BmIiwibmFtZSI6Imdvb2dsZS1vYXV0aDIiLCJzdHJhdGVneSI6Imdvb2dsZS1vYXV0aDIifSwiaXNzIjoiaHR0cHM6Ly9hdXRoLmFzdHJvbm9tZXIuaW8vIiwic3ViIjoiZ29vZ2xlLW9hdXRoMnwxMTA5MjE1NDA1NTE1MjU2NTE5MTIiLCJhdWQiOlsiYXN0cm9ub21lci1lZSIsImh0dHBzOi8vYXN0cm9ub21lci1wcm9kLnVzLmF1dGgwLmNvbS91c2VyaW5mbyJdLCJpYXQiOjE3NjQ0Mjk5OTgsImV4cCI6MTc2NDQzMzU5OCwic2NvcGUiOiJvcGVuaWQgcHJvZmlsZSBlbWFpbCBvZmZsaW5lX2FjY2VzcyIsImF6cCI6IllxOWF0WVhUZWY2dGVaWUpYa3dsUWw2bFhwTktrejh1IiwicGVybWlzc2lvbnMiOltdfQ.FDG01-XN1-l5zg8u3a00DFdMl0btKWp2mNVt5zZRcWTQ_LH6Y3C5mV-bGaRX6pmU2GZWKzf4clOX89Zxhvqmd2bMts-Grh63JMdvGXHC9ITNmzXX-6lKadAIfoodpPooPqLHgKi93OlotFS90WWjYouTB9_UVA6M0jgvLTeUMLxT0gK8800QiWjvdC4rhh4HNJHXVN_KGPfnVS4DMm0_syppqvoczQSV-j_EERj3gplHxSMnl02M4_L7Vu46IDb2mZl3qwXu7pV1YQw8vFtaHkcDRc5QBFPlG1m-3ieHG0tDZNI47wgQmjOngt7q3QQn4hGDf_fxkP6lDap3NL0Hlw
+
+gcloud functions deploy transform_repos_llm_enrich \
+    --gen2 \
+    --region=us-central1 \
+    --runtime=python310 \
+    --entry-point=task \
+    --source=. \
+    --trigger-http \
+    --allow-unauthenticated \
+
+    gcloud functions deploy transform_repos_llm_enrich \
+    --region=us-central1 \
+    --gen2 \
+    --runtime=python310 \
+    --entry-point=task \
+    --source=. \
+    --trigger-http \
+    --allow-unauthenticated \
+    --timeout=540s \
+    --memory=1Gi \
+    --set-env-vars OPENAI_API_KEY="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"
+
+
+gcloud functions deploy transform_repos_llm_enrich \
+  --region=us-central1 \
+  --gen2 \
+  --runtime=python310 \
+  --entry-point=task \
+  --source=. \
+  --trigger-http \
+  --allow-unauthenticated \
+  --timeout=900s \
+  --memory=1Gi \
+  --cpu=1 \
+  --max-instances=1 \
+  --set-env-vars OPENAI_API_KEY="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"
+
+curl -X POST "https://us-central1-ba-882-fall25-team8.cloudfunctions.net/transform_repos_llm_enrich?limit=10" \
+    -H "Content-Type: application/json" \
+    -d '{}'
+
+gcloud functions deploy transform_repos_llm_enrich \
+  --region=us-central1 \
+  --gen2 \
+  --runtime=python310 \
+  --entry-point=task \
+  --source=. \
+  --trigger-http \
+  --allow-unauthenticated \
+  --timeout=540s \
+  --memory=1Gi \
+  --set-env-vars OPENAI_API_KEY="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"
